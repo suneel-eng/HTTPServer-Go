@@ -1,11 +1,13 @@
 package main
 
 import (
+	"fmt"
 	"html/template"
 	"log"
 	"net/http"
 
 	"github.com/gorilla/mux"
+	"github.com/gorilla/sessions"
 )
 
 func logger(f http.HandlerFunc) http.HandlerFunc {
@@ -14,6 +16,12 @@ func logger(f http.HandlerFunc) http.HandlerFunc {
 		f(w, r)
 	}
 }
+
+var (
+	// key must be 16, 24 or 32 bytes long (AES-128, AES-192 or AES-256)
+	key   = []byte("super-secret-key")
+	store = sessions.NewCookieStore(key)
+)
 
 func main() {
 
@@ -34,18 +42,38 @@ func main() {
 
 	r.HandleFunc("/", logger(func(w http.ResponseWriter, r *http.Request) {
 
+		session, _ := store.Get(r, "cookie-username")
+
 		if r.Method == http.MethodGet {
-			tmpl := template.Must(template.ParseFiles("./static/public/index.html"))
-			tmpl.Execute(w, nil)
+
+			if value, ok := session.Values["username"]; !ok {
+				fmt.Println(ok)
+				tmpl := template.Must(template.ParseFiles("./static/public/index.html"))
+				tmpl.Execute(w, nil)
+			} else {
+				fmt.Println(ok)
+				username := value
+				tmpl := template.Must(template.ParseFiles("./static/private/dashboard.html"))
+				tmpl.Execute(w, username)
+			}
+
 			return
 		}
 
 		if r.Method == http.MethodPost {
 			username := r.FormValue("username")
+			session.Values["username"] = username
+			session.Save(r, w)
 			tmpl := template.Must(template.ParseFiles("./static/private/dashboard.html"))
 			tmpl.Execute(w, username)
 		}
 	})).Methods("POST", "GET")
+
+	r.HandleFunc("/logout", logger(func(w http.ResponseWriter, req *http.Request) {
+		session, _ := store.Get(req, "cookie-username")
+		session.Options.MaxAge = -1
+		session.Save(req, w)
+	})).Methods("POST")
 
 	http.ListenAndServe("localhost:3000", r)
 }

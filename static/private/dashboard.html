@@ -4,8 +4,36 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Document</title>
+    <style>
+        button {
+            padding: 1rem;
+            margin-top: 1rem;
+            background-color: blueviolet;
+            color: white;
+            font-size: 1.2rem;
+            letter-spacing: 2px;
+            cursor: pointer;
+            border: none;
+        }
+    </style>
 </head>
 <body>
     <h1>{{ . }}</h1>
+    <button>Logout</button>
+
+    <script>
+        const btn = document.querySelector("button");
+        const logout = async () => {
+            try {
+                await fetch("/logout", {
+                    method: "POST"
+                });
+                window.location.reload();
+            } catch(err) {
+                alert(err)
+            }
+        }
+        btn.addEventListener("click", logout)
+    </script>
 </body>
 </html>
